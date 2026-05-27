@@ -28,7 +28,7 @@ const questions = [
 
 let currentQ = 0, score = 0, userName = "", answers = [];
 
-// Сохранение результата в Firebase
+// Сохранение результата
 async function saveResultToFirebase(percent) {
   try {
     await db.collection("testResults").add({
@@ -45,10 +45,19 @@ async function saveResultToFirebase(percent) {
 
 // Загрузка результатов
 async function showAllResults() {
+  const container = document.getElementById('adminResults');
+  container.innerHTML = '<p>Загрузка...</p>';
+
   try {
     const snapshot = await db.collection("testResults").orderBy("timestamp", "desc").get();
-    let html = `<p class="mb-4">Всего прохождений: ${snapshot.size}</p>`;
+    
+    if (snapshot.empty) {
+      container.innerHTML = '<p>Пока нет результатов</p>';
+      return;
+    }
 
+    let html = `<p class="mb-4">Всего прохождений: ${snapshot.size}</p>`;
+    
     snapshot.forEach(doc => {
       const r = doc.data();
       html += `
@@ -58,13 +67,13 @@ async function showAllResults() {
         </div>`;
     });
 
-    document.getElementById('adminResults').innerHTML = html || '<p>Пока нет результатов</p>';
+    container.innerHTML = html;
   } catch (e) {
-    document.getElementById('adminResults').innerHTML = '<p>Ошибка загрузки</p>';
+    container.innerHTML = `<p class="text-red-500">Ошибка загрузки: ${e.message}</p>`;
   }
 }
 
-// Опросник
+// Опросник (остальные функции)
 function startQuiz() {
   userName = document.getElementById('userName').value.trim();
   if (!userName) return alert("Введите ваше имя!");
@@ -89,9 +98,7 @@ function showQuestion() {
   q.options.forEach((text, i) => {
     const label = document.createElement('label');
     label.className = "option-label";
-    label.innerHTML = `
-      <input type="radio" name="q${currentQ}" onchange="selectAnswer(${i})"> ${text}
-    `;
+    label.innerHTML = `<input type="radio" name="q${currentQ}" onchange="selectAnswer(${i})"> ${text}`;
     opts.appendChild(label);
   });
 
@@ -129,10 +136,10 @@ async function showResult() {
   circle.style.borderColor = percent >= 80 ? '#10b981' : '#eab308';
 
   document.getElementById('resultMsg').textContent = percent >= 80 
-    ? 'Отличный результат! Вы хорошо подготовлены.' 
+    ? 'Отличный результат!' 
     : 'Есть над чем поработать.';
 
-  await saveResultToFirebase(percent);   // Сохраняем в облако
+  await saveResultToFirebase(percent);
 }
 
 function loginAdmin() {
